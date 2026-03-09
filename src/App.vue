@@ -95,7 +95,6 @@ import {
   NMessageProvider,
   NModal,
   NSpace,
-  useMessage,
   useOsTheme
 } from "naive-ui";
 import {RouterLink} from "vue-router";
@@ -106,7 +105,7 @@ import hljs from 'highlight.js/lib/core'
 
 const osThemeRef = useOsTheme();
 let theme = computed(() => osThemeRef.value === "dark" ? darkTheme : null);
-const message = useMessage();
+const message = console;
 
 function pad(n) {
   return n.toString().padStart(2, '0');
@@ -314,18 +313,18 @@ function openInitModal() {
 
 async function submitInitServer() {
   if (!initForm.school || !initForm.grade || !initForm.cls) {
-    message.warning('请完整填写学校/年级/班级');
+    message.warn('请完整填写学校/年级/班级');
     return;
   }
   if (!initForm.password) {
-    message.warning('请输入管理员密码');
+    message.warn('请输入管理员密码');
     return;
   }
   let payload;
   try {
     payload = JSON.parse(initForm.bodyText);
   } catch (e) {
-    message.error('初始化请求体不是合法 JSON');
+    message.error('初始化请求体不是合法 JSON：', e);
     return;
   }
 
@@ -344,7 +343,7 @@ async function submitInitServer() {
           }
         }
     );
-    message.success('初始化成功，正在刷新菜单');
+    message.log('初始化成功，正在刷新菜单');
     showInitModal.value = false;
     initForm.password = '';
 
