@@ -35,6 +35,21 @@ const router = createRouter(
                 component: () => import("../views/AddAutorunSchedule.vue")
             },
             {
+              path: '/countdown',
+              name: 'Countdown',
+              component: () => import("../views/Countdown.vue")
+            },
+          {
+            path: '/countdown/add',
+            name: 'CountdownAdd',
+            component: () => import("../views/AddCountdown.vue")
+          },
+          {
+            path: '/countdown/edit/:id',
+            name: 'CountdownEdit',
+            component: () => import("../views/AddCountdown.vue")
+          },
+          {
                 path: '/config/:school/:grade/subjects',
                 name: 'Subjects',
                 component: () => import("../views/SubjectsConfig.vue")
