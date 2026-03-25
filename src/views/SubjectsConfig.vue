@@ -1,8 +1,6 @@
 <script setup>
-import {
-    NForm, NFormItem, NInput, NButton, NFlex, NCode, NCard, NStatistic, NModal, NSpace, useMessage
-} from "naive-ui";
-import {reactive, ref, computed} from "vue";
+import {NButton, NCard, NCode, NFlex, NForm, NFormItem, NInput, NModal, NSpace, NStatistic, useMessage} from "naive-ui";
+import {computed, reactive, ref} from "vue";
 import {zip} from "@/utils.js";
 import axios from "axios";
 import {APISRV} from "@/global.js";
@@ -43,7 +41,7 @@ const putSubjects = () => {
     return Promise.resolve(
         axios.put(
             `${APISRV}/web/config/${school.value}/${grade.value}/subjects`,
-            formRef.value,
+            dynamicForm,
             {
                 auth: {
                     username: 'ElectronClassSchedule',
@@ -102,6 +100,8 @@ useRequest(
       }
     }
 );
+
+const previewCode = computed(() => JSON.stringify(dynamicForm, null, 2));
 </script>
 
 <template>
@@ -162,7 +162,7 @@ useRequest(
             </n-form>
         </NCard>
         <NCard title="提交前预览">
-            <n-code :code="JSON.stringify(formRef, null, 2)" language="json" show-line-numbers />
+          <n-code :code="previewCode" language="json" show-line-numbers/>
         </NCard>
         <n-modal v-model:show="showModal" preset="dialog" title="Dialog">
             <template #header>

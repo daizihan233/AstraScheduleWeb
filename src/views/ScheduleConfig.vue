@@ -94,7 +94,7 @@ const putSchedule = () => {
     return Promise.resolve(
         axios.put(
             `${APISRV}/web/config/${school.value}/${grade.value}/${cls.value}/schedule`,
-            formRef.value,
+            dynamicForm,
             {
                 auth: {
                     username: 'ElectronClassSchedule',
@@ -253,6 +253,8 @@ useRequest(
 const expandedDays = ref([0]);
 function expandAllDays(){ expandedDays.value = week.map((_,i)=>i); }
 function collapseAllDays(){ expandedDays.value = []; }
+
+const previewCode = computed(() => JSON.stringify(dynamicForm, null, 2));
 </script>
 
 <template>
@@ -323,7 +325,7 @@ function collapseAllDays(){ expandedDays.value = []; }
             </n-form>
         </NCard>
         <NCard title="提交前预览">
-            <n-code :code="JSON.stringify(formRef, null, 2)" language="json" show-line-numbers />
+          <n-code :code="previewCode" language="json" show-line-numbers/>
         </NCard>
         <n-modal v-model:show="showModal" preset="dialog" title="Dialog">
             <template #header>
