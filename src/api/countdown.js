@@ -1,8 +1,6 @@
 import axios from 'axios'
 import {APISRV} from '@/global.js'
-import {fetchScopeTree, flattenScope} from '@/api/autorun.js'
-
-export {fetchScopeTree, flattenScope}
+export {fetchScopeTree, flattenScope} from '@/api/autorun.js'
 
 export async function listCountdown(scope) {
   const url = scope

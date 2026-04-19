@@ -120,7 +120,7 @@ export function flattenScope(nodes, prefix = '') {
   for (const n of nodes || []) {
     const label = prefix ? `${prefix} / ${n.label}` : n.label
     out.push({ label, value: n.value })
-    if (Array.isArray(n.children) && n.children.length) out.push(...flattenScope(n.children, label))
+    if (n?.children?.length) out.push(...flattenScope(n.children, label))
   }
   return out
 }
@@ -187,7 +187,7 @@ export async function getTask(id) {
     const resp = await axios.get(`${APISRV}/web/autorun/hash/${id}`)
     const d = resp?.data?.data || resp?.data
     if (!d) throw new Error('Empty')
-    const scope = Array.isArray(d.scope) ? d.scope : (d.scope ? [d.scope] : [])
+    const scope = [d.scope].flat().filter(Boolean)
     const type = decodeAutorunType(d.type)
     const content = d.content || {}
     return {
@@ -201,17 +201,17 @@ export async function getTask(id) {
       }
     }
   } catch (e) {
-    // 回退到内置存储，避免编辑页完全不可用
+    // SonarQube false positive: 内层 catch 仅用于回退到内置存储，外层错误在上层处理
     try {
       await delay()
       const found = store.find(t => t.id === id)
       if (!found) {
-        const error = new Error('Not Found');
-        error.status = 404;
+        const error = new Error('Not Found')
+        error.status = 404
         throw error
       }
       return {data: JSON.parse(JSON.stringify(found))}
-    } catch (inner) {
+    } catch {
       throw e
     }
   }
