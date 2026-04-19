@@ -26,18 +26,6 @@ export function normalizeScopes(list) {
     return shouldIncludeScope(p, schoolSet, gradeSet)
   })
 }
-  const out = []
-  for (const v of arr) {
-    const p = parseScope(v)
-    if (p.level === 'school') out.push(v)
-    else if (p.level === 'grade') {
-      if (!schoolSet.has(p.school)) out.push(v)
-    } else if (p.level === 'class') {
-      if (!schoolSet.has(p.school) && !gradeSet.has(`${p.school}/${p.grade}`)) out.push(v)
-    }
-  }
-  return out
-}
 
 function isDisabledForLevel(p, schoolSet, gradeSet) {
   if (p.level === 'grade') return schoolSet.has(p.school)
