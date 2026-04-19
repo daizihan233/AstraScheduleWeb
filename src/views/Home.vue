@@ -115,14 +115,14 @@ useRequest(
     }
 );
 const weatherError = computed(() => {
-    return parseInt(statInfo.weather_error).toLocaleString();
+    return Number.parseInt(statInfo.weather_error).toLocaleString();
 });
 const wsDisconnect = computed(() => {
-    return parseInt(statInfo.websocket_disconnect).toLocaleString();
+    return Number.parseInt(statInfo.websocket_disconnect).toLocaleString();
 });
 const clientsCount = computed(() => {
     // noinspection JSCheckFunctionSignatures
-    return parseInt(statInfo.clients).toLocaleString();
+    return Number.parseInt(statInfo.clients).toLocaleString();
 });
 useThemeVars();
 

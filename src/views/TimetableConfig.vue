@@ -52,7 +52,7 @@ function parseTime(str){
   if(!str) return null
   const m = str.match(/^([01]\d|2[0-3]):([0-5]\d)$/)
   if(!m) return null
-  return parseInt(m[1])*60 + parseInt(m[2])
+  return Number.parseInt(m[1])*60 + Number.parseInt(m[2])
 }
 function toHHMM(mins){
   if(mins<0) mins=0
@@ -83,7 +83,7 @@ function buildPayload() {
       const range = `${s.start}-${s.end}`
       let val = null
       if (s.valueType === 'index') {
-        if (s.index === '' || s.index === null || isNaN(s.index)) continue
+        if (s.index === '' || s.index === null || Number.isNaN(s.index)) continue
         val = Number(s.index)
       } else {
         if (!s.text) continue
@@ -93,7 +93,7 @@ function buildPayload() {
     }
     timetableObj[t.name] = segMap
     // divider 解析
-    dividerObj[t.name] = t.dividerInput.trim() === '' ? [] : t.dividerInput.split(',').map(x => Number(x.trim())).filter(x => !isNaN(x))
+    dividerObj[t.name] = t.dividerInput.trim() === '' ? [] : t.dividerInput.split(',').map(x => Number(x.trim())).filter(x => Number.isNaN(x))
   }
   return {
     timetable: timetableObj,
