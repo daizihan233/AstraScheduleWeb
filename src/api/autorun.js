@@ -210,7 +210,7 @@ export async function getTask(id) {
         error.status = 404
         throw error
       }
-      return {data: JSON.parse(JSON.stringify(found))}
+      return {data: structuredClone(found)}
     } catch {
       throw e
     }
