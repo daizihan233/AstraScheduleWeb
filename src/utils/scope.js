@@ -1,15 +1,31 @@
 // 通用作用域工具
 import {parseScope} from '@/api/autorun.js'
 
-export function normalizeScopes(list) {
-  const arr = Array.isArray(list) ? Array.from(new Set(list)) : []
+function collectScopeLevels(arr) {
   const schoolSet = new Set()
-  const gradeSet = new Set() // key: `${school}/${grade}`
+  const gradeSet = new Set()
   for (const v of arr) {
     const p = parseScope(v)
     if (p.level === 'school') schoolSet.add(p.school)
     else if (p.level === 'grade') gradeSet.add(`${p.school}/${p.grade}`)
   }
+  return {schoolSet, gradeSet}
+}
+
+function shouldIncludeScope(p, schoolSet, gradeSet) {
+  if (p.level === 'school') return true
+  if (p.level === 'grade') return !schoolSet.has(p.school)
+  return !schoolSet.has(p.school) && !gradeSet.has(`${p.school}/${p.grade}`)
+}
+
+export function normalizeScopes(list) {
+  const arr = Array.isArray(list) ? Array.from(new Set(list)) : []
+  const {schoolSet, gradeSet} = collectScopeLevels(arr)
+  return arr.filter(v => {
+    const p = parseScope(v)
+    return shouldIncludeScope(p, schoolSet, gradeSet)
+  })
+}
   const out = []
   for (const v of arr) {
     const p = parseScope(v)
@@ -23,22 +39,19 @@ export function normalizeScopes(list) {
   return out
 }
 
+function isDisabledForLevel(p, schoolSet, gradeSet) {
+  if (p.level === 'grade') return schoolSet.has(p.school)
+  if (p.level === 'class') return schoolSet.has(p.school) || gradeSet.has(`${p.school}/${p.grade}`)
+  return false
+}
+
 export function applyDisabledToScopeOptions(options, selected) {
   const arr = Array.isArray(options) ? options : []
   const sel = Array.isArray(selected) ? selected : []
-  const schoolSet = new Set()
-  const gradeSet = new Set()
-  for (const v of sel) {
-    const p = parseScope(v)
-    if (p.level === 'school') schoolSet.add(p.school)
-    else if (p.level === 'grade') gradeSet.add(`${p.school}/${p.grade}`)
-  }
+  const {schoolSet, gradeSet} = collectScopeLevels(sel)
   return arr.map(opt => {
     const p = parseScope(opt.value)
-    let disabled = false
-    if (p.level === 'grade') disabled = schoolSet.has(p.school)
-    else if (p.level === 'class') disabled = schoolSet.has(p.school) || gradeSet.has(`${p.school}/${p.grade}`)
-    return {...opt, disabled}
+    return {...opt, disabled: isDisabledForLevel(p, schoolSet, gradeSet)}
   })
 }
 

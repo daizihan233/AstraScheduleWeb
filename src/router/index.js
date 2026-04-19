@@ -70,6 +70,11 @@ const router = createRouter(
                 component: () => import("../views/SettingsConfig.vue")
             },
             {
+                path: '/tools',
+                name: 'Tools',
+                component: () => import("../views/Tools.vue")
+            },
+            {
                 path: '/404',
                 name: '404',
                 component: () => import("../views/NotFound.vue")
