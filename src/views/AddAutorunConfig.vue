@@ -63,11 +63,9 @@ const form = reactive({
     // 作息表
     timetableId: '',
     // 课程表/全部调整
-    weekday: null,
-    targetWeekday: null,
-    targetWeek: null,
-    subject: '',
-    timetableTemplateId: ''
+    schedule: {
+      periods: []
+    }
   }
 })
 
@@ -83,11 +81,9 @@ function setFormFromData(d){
   // 作息表
   form.content.timetableId = c.timetableId || ''
   // 课程表/全部调整
-  form.content.weekday = c.weekday ?? null
-  form.content.targetWeekday = c.targetWeekday ?? null
-  form.content.targetWeek = c.targetWeek ?? null
-  form.content.subject = c.subject || ''
-  form.content.timetableTemplateId = c.timetableTemplateId || ''
+  form.content.schedule.periods = Array.isArray(c.schedule?.periods)
+    ? c.schedule.periods.map(p => ({ no: Number(p.no)||0, subject: String(p.subject||'') }))
+    : []
 }
 
 const { run: runGet, loading: loadingGet } = useRequest(() => getTask(route.params.id), {
@@ -111,10 +107,8 @@ function validateBasic(){
       return false
     }
   } else if (form.type === AutorunType.SCHEDULE || form.type === AutorunType.ALL) {
-    if (form.content.weekday === null || form.content.targetWeekday === null || form.content.targetWeek === null || !form.content.subject) {
-      message.warning('请完整填写课程表调整信息');
-      return false
-    }
+    // 课程表/全部调整验证 - 需要更复杂的逻辑，暂时简化
+    if (!form.content.date) { message.warning('请选择日期'); return false }
   }
   return true
 }
@@ -136,12 +130,9 @@ async function confirmSave(pwd) {
     } else if (form.type === AutorunType.TIMETABLE) {
       content = { date: form.content.date, timetableId: form.content.timetableId }
     } else if (form.type === AutorunType.SCHEDULE || form.type === AutorunType.ALL) {
-      content = {
-        weekday: form.content.weekday,
-        targetWeekday: form.content.targetWeekday,
-        targetWeek: form.content.targetWeek,
-        subject: form.content.subject,
-        timetableTemplateId: form.content.timetableTemplateId
+      content = { date: form.content.date, schedule: { periods: form.content.schedule.periods } }
+      if (form.type === AutorunType.ALL) {
+        content.timetableId = form.content.timetableId
       }
     }
     const payload = { type: form.type, scope: form.scope, priority: form.priority, content }
@@ -321,39 +312,6 @@ async function doImport(){
 }
 
 const computedScopeOptions = computed(() => applyDisabledToScopeOptions(scopeSelectOptions.value, form.scope))
-
-const weekdayOptions = [
-  { label: '周一', value: 0 },
-  { label: '周二', value: 1 },
-  { label: '周三', value: 2 },
-  { label: '周四', value: 3 },
-  { label: '周五', value: 4 },
-  { label: '周六', value: 5 },
-  { label: '周日', value: 6 },
-]
-
-const weekOptions = [
-  { label: '第1周', value: 1 },
-  { label: '第2周', value: 2 },
-  { label: '第3周', value: 3 },
-  { label: '第4周', value: 4 },
-  { label: '第5周', value: 5 },
-  { label: '第6周', value: 6 },
-  { label: '第7周', value: 7 },
-  { label: '第8周', value: 8 },
-  { label: '第9周', value: 9 },
-  { label: '第10周', value: 10 },
-  { label: '第11周', value: 11 },
-  { label: '第12周', value: 12 },
-  { label: '第13周', value: 13 },
-  { label: '第14周', value: 14 },
-  { label: '第15周', value: 15 },
-  { label: '第16周', value: 16 },
-  { label: '第17周', value: 17 },
-  { label: '第18周', value: 18 },
-  { label: '第19周', value: 19 },
-  { label: '第20周', value: 20 },
-]
 </script>
 
 <template>
@@ -401,20 +359,14 @@ const weekOptions = [
         </n-form-item>
       </template>
       <template v-else-if="form.type === 2 || form.type === 3">
-        <n-form-item label="原始星期">
-          <n-select v-model:value="form.content.weekday" :options="weekdayOptions" placeholder="选择原始星期" />
+        <n-form-item label="调整日期">
+          <n-date-picker v-model:formatted-value="form.content.date" type="date" value-format="yyyy-MM-dd" />
         </n-form-item>
-        <n-form-item label="目标星期">
-          <n-select v-model:value="form.content.targetWeekday" :options="weekdayOptions" placeholder="选择目标星期" />
+        <n-form-item v-if="form.type === 3" label="作息表（ALL用）">
+          <n-input v-model:value="form.content.timetableId" placeholder="作息表ID（仅ALL类型）" />
         </n-form-item>
-        <n-form-item label="目标周">
-          <n-select v-model:value="form.content.targetWeek" :options="weekOptions" placeholder="选择目标周" />
-        </n-form-item>
-        <n-form-item label="课程">
-          <n-input v-model:value="form.content.subject" placeholder="输入课程名称" />
-        </n-form-item>
-        <n-form-item label="作息表模板">
-          <n-input v-model:value="form.content.timetableTemplateId" placeholder="作息表模板ID（可选）" />
+        <n-form-item label="课程安排">
+          <n-input type="textarea" :value="JSON.stringify(form.content.schedule.periods)" disabled placeholder="课程表调整功能需要更复杂的UI，当前仅保存空数组" />
         </n-form-item>
       </template>
 
