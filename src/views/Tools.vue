@@ -1,7 +1,7 @@
 <script setup>
-import { NButton, NCard, NFlex, NInput, NSpace, NText, useMessage } from 'naive-ui'
+import { NButton, NCard, NFlex, NInput, NSpace, NText, NRadioGroup, NRadioButton, useMessage } from 'naive-ui'
 import { ref } from 'vue'
-import { exportBackup, importBackup } from '@/api/backup.js'
+import { exportBackup, importBackup, fullExport, fullImport } from '@/api/backup.js'
 
 const messages = useMessage()
 const backupPwd = ref('')
@@ -9,6 +9,7 @@ const importFile = ref(null)
 const backupImporting = ref(false)
 const backupExporting = ref(false)
 const importFileInputRef = ref(null)
+const importMode = ref('overwrite')
 
 function saveBlob(content, filename) {
   const url = globalThis.URL.createObjectURL(content)
@@ -37,12 +38,12 @@ async function handleExportBackup() {
   }
   backupExporting.value = true
   try {
-    const resp = await exportBackup(backupPwd.value)
+    const resp = await fullExport(backupPwd.value)
     const now = new Date()
     const pad = (n) => String(n).padStart(2, '0')
-    const name = `astra-backup-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`
+    const name = `astra-full-backup-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`
     saveBlob(resp.data, name)
-    messages.success('备份导出成功')
+    messages.success('完整备份导出成功')
   } catch (error) {
     const status = error?.response?.status
     if (status === 401) messages.error('你寻思寻思这密码它对吗？')
@@ -63,9 +64,10 @@ async function handleImportBackup() {
   }
   backupImporting.value = true
   try {
-    const resp = await importBackup(importFile.value, backupPwd.value)
+    const resp = await fullImport(importFile.value, backupPwd.value, importMode.value)
     const msg = resp?.data?.message || '备份导入成功'
-    messages.success(`${msg}，建议刷新页面检查配置`)
+    const modeText = importMode.value === 'overwrite' ? '（覆盖重复数据）' : '（跳过重复数据）'
+    messages.success(`${msg}${modeText}，建议刷新页面检查配置`)
     importFile.value = null
     if (importFileInputRef.value) {
       importFileInputRef.value.value = ''
@@ -104,6 +106,11 @@ async function handleImportBackup() {
           style="display: none"
           @change="onImportFileChange"
         />
+        <NText depth="3">导入模式：</NText>
+        <NRadioGroup v-model:value="importMode">
+          <NRadioButton value="overwrite">覆盖（更新重复数据）</NRadioButton>
+          <NRadioButton value="skip">跳过（保留重复数据）</NRadioButton>
+        </NRadioGroup>
         <NButton type="warning" :disabled="!importFile" :loading="backupImporting" @click="handleImportBackup">导入还原</NButton>
       </NSpace>
     </NCard>
