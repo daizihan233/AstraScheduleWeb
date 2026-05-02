@@ -127,8 +127,8 @@ function refresh() { run() }
 const addOptions = [
   { label: '调休', key: 'compensation', action: () => router.push('/autorun/add') },
   { label: '作息表调整', key: 'timetable', action: () => router.push('/autorun/add') },
-  { label: '课程表调整', key: 'schedule', action: () => router.push('/autorun/add') },
-  { label: '全部调整', key: 'all', action: () => router.push('/autorun/add') },
+  { label: '课程表调整', key: 'schedule', action: () => router.push('/autorun/add-schedule') },
+  { label: '全部调整', key: 'all', action: () => router.push('/autorun/add-schedule') },
 ]
 
 function onAddSelect(key) {

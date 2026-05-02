@@ -45,10 +45,9 @@ const router = useRouter()
 const message = useMessage()
 
 const isEdit = computed(() => !!route.params.id)
-const title = computed(() => isEdit.value ? '编辑自动任务' : '新增自动任务')
+const title = computed(() => isEdit.value ? '编辑自动任务（调休/作息表）' : '新增自动任务（调休/作息表）')
 
-// 所有类型选项
-const allTypeOptions = autorunTypeOptions
+const basicTypeOptions = autorunTypeOptions.filter(o => o.value === AutorunType.COMPENSATION || o.value === AutorunType.TIMETABLE)
 
 const formRef = ref(null)
 const form = reactive({
@@ -56,17 +55,7 @@ const form = reactive({
   type: AutorunType.COMPENSATION,
   scope: [],
   priority: 0,
-  content: {
-    // 调休
-    date: null,
-    useDate: null,
-    // 作息表
-    timetableId: '',
-    // 课程表/全部调整
-    schedule: {
-      periods: []
-    }
-  }
+  content: {date: null, useDate: null, timetableId: ''}
 })
 
 function setFormFromData(d){
@@ -75,15 +64,7 @@ function setFormFromData(d){
   form.scope = Array.isArray(d.scope) ? d.scope.slice() : []
   form.priority = d.priority || 0
   const c = d.content || {}
-  // 调休
-  form.content.date = c.date || null
-  form.content.useDate = c.useDate || null
-  // 作息表
-  form.content.timetableId = c.timetableId || ''
-  // 课程表/全部调整
-  form.content.schedule.periods = Array.isArray(c.schedule?.periods)
-    ? c.schedule.periods.map(p => ({ no: Number(p.no)||0, subject: String(p.subject||'') }))
-    : []
+  form.content = { date: c.date || null, useDate: c.useDate || null, timetableId: c.timetableId || '' }
 }
 
 const { run: runGet, loading: loadingGet } = useRequest(() => getTask(route.params.id), {
@@ -106,9 +87,8 @@ function validateBasic(){
       message.warning('未找到可用作息表，请选择具体年级/班级作为生效域');
       return false
     }
-  } else if (form.type === AutorunType.SCHEDULE || form.type === AutorunType.ALL) {
-    // 课程表/全部调整验证 - 需要更复杂的逻辑，暂时简化
-    if (!form.content.date) { message.warning('请选择日期'); return false }
+  } else {
+    message.warning('仅支持在本页面编辑 调休/作息表 类型'); return false
   }
   return true
 }
@@ -124,18 +104,7 @@ function openSave(){
 async function confirmSave(pwd) {
   saving.value = true
   try{
-    let content = {}
-    if (form.type === AutorunType.COMPENSATION) {
-      content = { date: form.content.date, useDate: form.content.useDate }
-    } else if (form.type === AutorunType.TIMETABLE) {
-      content = { date: form.content.date, timetableId: form.content.timetableId }
-    } else if (form.type === AutorunType.SCHEDULE || form.type === AutorunType.ALL) {
-      content = { date: form.content.date, schedule: { periods: form.content.schedule.periods } }
-      if (form.type === AutorunType.ALL) {
-        content.timetableId = form.content.timetableId
-      }
-    }
-    const payload = { type: form.type, scope: form.scope, priority: form.priority, content }
+    const payload = { type: form.type, scope: form.scope, priority: form.priority, content: { ...form.content } }
     // 编辑模式：先删后建
     if (isEdit.value && form.id) {
       await axios.delete(`${APISRV}/web/autorun/${form.id}`, {
@@ -237,8 +206,8 @@ async function fillHolidayFromWorkday(){
     if (hd) form.content.useDate = hd
   } finally { autoFilling.value = false }
 }
-watch(() => [form.type, form.content.date, form.content.useDate], ([t, d, u]) => {
-  if (t !== AutorunType.COMPENSATION) return
+watch(()=>[form.type, form.content.date, form.content.useDate], ([t, d, u])=>{
+  if (t!==AutorunType.COMPENSATION) return
   if (u && !d) fillWorkdayFromHoliday()
   else if (d && !u) fillHolidayFromWorkday()
 })
@@ -322,7 +291,7 @@ const computedScopeOptions = computed(() => applyDisabledToScopeOptions(scopeSel
         <n-input v-model:value="form.id" disabled />
       </n-form-item>
       <n-form-item label="类型">
-        <n-select v-model:value="form.type" :options="allTypeOptions" />
+        <n-select v-model:value="form.type" :options="basicTypeOptions" />
       </n-form-item>
       <n-form-item v-if="form.type===0">
         <n-space>
@@ -356,17 +325,6 @@ const computedScopeOptions = computed(() => applyDisabledToScopeOptions(scopeSel
           <n-select v-model:value="form.content.timetableId" :loading="timetableLoading" :options="timetableOptionsDyn"
                     placeholder="先选择包含年级/班级的生效域后再选择作息表"/>
           <div v-if="timetableHint" style="font-size:12px;color:#888;margin-top:6px;">{{ timetableHint }}</div>
-        </n-form-item>
-      </template>
-      <template v-else-if="form.type === 2 || form.type === 3">
-        <n-form-item label="调整日期">
-          <n-date-picker v-model:formatted-value="form.content.date" type="date" value-format="yyyy-MM-dd" />
-        </n-form-item>
-        <n-form-item v-if="form.type === 3" label="作息表（ALL用）">
-          <n-input v-model:value="form.content.timetableId" placeholder="作息表ID（仅ALL类型）" />
-        </n-form-item>
-        <n-form-item label="课程安排">
-          <n-input type="textarea" :value="JSON.stringify(form.content.schedule.periods)" disabled placeholder="课程表调整功能需要更复杂的UI，当前仅保存空数组" />
         </n-form-item>
       </template>
 
