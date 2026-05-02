@@ -1,6 +1,6 @@
 <script setup>
 import {h, ref} from 'vue'
-import {NButton, NCard, NDataTable, NSpace, NTag, useMessage} from 'naive-ui'
+import {NButton, NCard, NDataTable, NDropdown, NSpace, NTag, useMessage} from 'naive-ui'
 import {useRequest} from 'vue-request'
 import {useRouter} from 'vue-router'
 import axios from 'axios'
@@ -123,16 +123,27 @@ const columns = [
 ]
 
 function refresh() { run() }
-function goAddBasic() { router.push('/autorun/add') }
-function goAddSchedule() { router.push('/autorun/add-schedule') }
+
+const addOptions = [
+  { label: '调休', key: 'compensation', action: () => router.push('/autorun/add') },
+  { label: '作息表调整', key: 'timetable', action: () => router.push('/autorun/add') },
+  { label: '课程表调整', key: 'schedule', action: () => router.push('/autorun/add-schedule') },
+  { label: '全部调整', key: 'all', action: () => router.push('/autorun/add-schedule') },
+]
+
+function onAddSelect(key) {
+  const opt = addOptions.find(o => o.key === key)
+  opt?.action()
+}
 </script>
 
 <template>
   <n-card :bordered="false" title="自动任务状态概览">
     <template #header-extra>
       <n-space>
-        <n-button size="small" @click="goAddBasic">新增（调休/作息表）</n-button>
-        <n-button size="small" @click="goAddSchedule">新增（课程表/ALL）</n-button>
+        <n-dropdown :options="addOptions" @select="onAddSelect" trigger="click">
+          <n-button size="small">新增</n-button>
+        </n-dropdown>
         <n-button size="small" @click="refresh" :loading="loading">刷新</n-button>
       </n-space>
     </template>
