@@ -1,14 +1,11 @@
 <script setup>
-import { NButton, NCard, NFlex, NInput, NSpace, NText, NRadioGroup, NRadioButton, useMessage } from 'naive-ui'
+import { NButton, NCard, NFlex, NSpace, NText, NRadioGroup, NRadioButton, useMessage } from 'naive-ui'
 import { ref } from 'vue'
 import { fullExport, fullImport } from '@/api/backup.js'
 import ConfirmPasswordModal from '@/components/ConfirmPasswordModal.vue'
 
 const messages = useMessage()
-const backupPwd = ref('')
 const importFile = ref(null)
-const backupImporting = ref(false)
-const backupExporting = ref(false)
 const importFileInputRef = ref(null)
 const importMode = ref('overwrite')
 
@@ -39,19 +36,11 @@ function onImportFileChange(e) {
 
 // 打开密码确认弹窗
 function openExportModal() {
-  if (!backupPwd.value) {
-    messages.warning('请先输入备份/还原密码')
-    return
-  }
   pwdModalAction.value = 'export'
   showPwdModal.value = true
 }
 
 function openImportModal() {
-  if (!backupPwd.value) {
-    messages.warning('请先输入备份/还原密码')
-    return
-  }
   if (!importFile.value) {
     messages.warning('请先选择备份文件')
     return
@@ -102,8 +91,6 @@ async function onPwdConfirm(password) {
 
     <NCard title="系统备份 / 还原">
       <NSpace vertical>
-        <NText depth="3">管理密码（BasicAuth token）</NText>
-        <NInput v-model:value="backupPwd" type="password" placeholder="请输入密码" clearable />
         <NFlex>
           <NButton type="primary" @click="openExportModal">导出备份</NButton>
           <NButton @click="pickImportFile">选择备份文件</NButton>
