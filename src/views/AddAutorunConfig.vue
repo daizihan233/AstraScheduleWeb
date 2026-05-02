@@ -25,7 +25,6 @@ import {
   fetchClassScheduleTemplateByWeekday,
   fetchCompByHoliday,
   fetchCompByWorkday,
-  fetchCompYearPairs,
   fetchScopeTree,
   fetchSubjectsOptions,
   fetchTimetableOptions,
@@ -294,72 +293,6 @@ watch(()=>[form.type, form.content.date, form.content.useDate], ([t, d, u])=>{
   else if (d && !u) fillHolidayFromWorkday()
 })
 
-const showImport = ref(false)
-const importYear = ref(new Date().getFullYear())
-const importAllScope = ref(true)
-const importPwd = ref('')
-const importing = ref(false)
-
-function buildImportScope() {
-  if (importAllScope.value) return ['ALL']
-  return Array.isArray(form.scope) ? form.scope : []
-}
-
-async function processImportPairs(pairs, scopePayload) {
-  let ok = 0, fail = 0, aborted = false
-  for (const p of pairs) {
-    if (aborted) break
-    const {holiday, workday} = p || {}
-    if (!holiday || !workday) {
-      fail++;
-      continue
-    }
-    const payload = {
-      type: AutorunType.COMPENSATION,
-      scope: scopePayload,
-      priority: form.priority || 0,
-      content: {date: workday, useDate: holiday}
-    }
-    try {
-      await saveAutorun(payload, importPwd.value);
-      ok++
-    } catch (e) {
-      const status = e?.status || e?.response?.status;
-      if (status === 401) {
-        message.error('密码错误，已终止导入');
-        aborted = true;
-        break
-      }
-      fail++
-    }
-  }
-  return {ok, fail, aborted}
-}
-
-async function openImport(){ showImport.value = true }
-async function doImport(){
-  importing.value = true
-  try{
-    const { data } = await fetchCompYearPairs(importYear.value)
-    const pairs = Array.isArray(data?.pairs) ? data.pairs : []
-    if (pairs.length===0){ message.warning('该年无调休数据'); return }
-    const scopePayload = buildImportScope()
-    if (!importAllScope.value && scopePayload.length === 0){ message.warning('请选择生效域或勾选使用 ALL'); return }
-    const {ok, fail, aborted} = await processImportPairs(pairs, scopePayload)
-    if (ok > 0) {
-      const failPart = fail > 0 ? '，失败 ' + fail + ' 条' : '';
-      message.success('已导入 ' + ok + ' 条' + failPart)
-    } else if (!aborted) {
-      message.error('导入失败')
-    }
-    if (ok > 0 && !aborted) showImport.value = false
-  } catch (e) {
-    if (!e?.response?.status) console.error(e)
-  } finally {
-    importing.value = false
-  }
-}
-
 // ============================================================
 // SCHEDULE/ALL 自动填充
 // ============================================================
@@ -593,7 +526,7 @@ const computedScopeOptions = computed(() => applyDisabledToScopeOptions(scopeSel
 
       <n-form-item v-if="form.type === AutorunType.COMPENSATION">
         <n-space>
-          <n-button size="small" @click="openImport">导入全年调休</n-button>
+          <n-button size="small" @click="router.push('/tools/compensation-import')">导入全年调休</n-button>
           <n-button size="small" :loading="autoFilling" @click="fillWorkdayFromHoliday" :disabled="!form.content.useDate">由节假日反推工作日</n-button>
           <n-button size="small" :loading="autoFilling" @click="fillHolidayFromWorkday" :disabled="!form.content.date">由工作日反推节假日</n-button>
         </n-space>
@@ -664,24 +597,6 @@ const computedScopeOptions = computed(() => applyDisabledToScopeOptions(scopeSel
       </n-form-item>
     </n-form>
   </n-card>
-
-  <n-modal v-model:show="showImport" preset="dialog" title="导入全年调休">
-    <n-space vertical>
-      <n-form-item label="年份">
-        <n-input-number v-model:value="importYear" :show-button="false" :min="1970" :max="2100" />
-      </n-form-item>
-      <n-form-item label="作用域使用 ALL">
-        <n-select v-model:value="importAllScope" :options="[{label:'是',value:true},{label:'否',value:false}]" />
-      </n-form-item>
-      <n-form-item label="密码">
-        <n-input v-model:value="importPwd" type="password" clearable placeholder="输入保存密码（Basic Auth）" />
-      </n-form-item>
-      <div style="font-size:12px;color:#888">将按 pairs 中的 workday 作为 date、holiday 作为 useDate 创建调休任务，并逐条提交到服务端。</div>
-    </n-space>
-    <template #action>
-      <n-button type="primary" :loading="importing" @click="doImport">开始导入</n-button>
-    </template>
-  </n-modal>
 
   <n-modal v-model:show="showConflict" preset="dialog" title="节次数冲突">
     <n-space vertical>

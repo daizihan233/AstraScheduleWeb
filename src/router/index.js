@@ -65,6 +65,11 @@ const router = createRouter(
                 component: () => import("../views/Tools.vue")
             },
             {
+                path: '/tools/compensation-import',
+                name: 'CompensationImport',
+                component: () => import("../views/CompensationImport.vue")
+            },
+            {
                 path: '/404',
                 name: '404',
                 component: () => import("../views/NotFound.vue")

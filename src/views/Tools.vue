@@ -1,10 +1,12 @@
 <script setup>
 import { NButton, NCard, NFlex, NSpace, NText, NRadioGroup, NRadioButton, useMessage } from 'naive-ui'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { fullExport, fullImport } from '@/api/backup.js'
 import ConfirmPasswordModal from '@/components/ConfirmPasswordModal.vue'
 
 const messages = useMessage()
+const router = useRouter()
 const importFile = ref(null)
 const importFileInputRef = ref(null)
 const importMode = ref('overwrite')
@@ -109,6 +111,13 @@ async function onPwdConfirm(password) {
           <NRadioButton value="skip">跳过（保留重复数据）</NRadioButton>
         </NRadioGroup>
         <NButton type="warning" :disabled="!importFile" @click="openImportModal">导入还原</NButton>
+      </NSpace>
+    </NCard>
+
+    <NCard title="调休导入">
+      <NSpace vertical>
+        <NText depth="3">批量导入全年调休数据，支持选择生效域并逐条写入。</NText>
+        <NButton type="primary" @click="router.push('/tools/compensation-import')">打开调休导入</NButton>
       </NSpace>
     </NCard>
 
