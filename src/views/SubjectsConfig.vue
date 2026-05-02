@@ -1,18 +1,18 @@
 <script setup>
-import {NButton, NCard, NCode, NFlex, NForm, NFormItem, NInput, NModal, NSpace, NStatistic, useMessage} from "naive-ui";
+import {NButton, NCard, NCode, NFlex, NForm, NFormItem, NInput, NSpace, NStatistic, useMessage} from "naive-ui";
 import {computed, reactive, ref} from "vue";
 import {zip} from "@/utils.js";
 import axios from "axios";
 import {APISRV} from "@/global.js";
 import {useRequest} from "vue-request";
 import {useRoute} from "vue-router";
+import ConfirmPasswordModal from '@/components/ConfirmPasswordModal.vue';
 
 const route = useRoute();
 
 const school = computed(() => route.params.school);
 const grade = computed(() => route.params.grade);
 const formRef = ref(null);
-let pwd = ref('');
 
 const dynamicForm = reactive({
   abbr: [{ text: "" }],
@@ -30,14 +30,13 @@ const addItem = () => {
 };
 
 let showModal = ref(false);
-let disabledButton = ref(false);
-let buttonText = ref("确认提交");
+let pwdModalLoading = ref(false);
 
 function submit() {
     showModal.value = true;
 }
 
-const putSubjects = () => {
+const putSubjects = (password) => {
     return Promise.resolve(
         axios.put(
             `${APISRV}/web/config/${school.value}/${grade.value}/subjects`,
@@ -45,7 +44,7 @@ const putSubjects = () => {
             {
                 auth: {
                     username: 'ElectronClassSchedule',
-                    password: pwd.value
+                    password: password
                 }
             }
         )
@@ -53,11 +52,10 @@ const putSubjects = () => {
 }
 
 const messages = useMessage();
-function okay() {
-    disabledButton.value = true
-    buttonText.value = "你等会儿"
+function onPwdConfirm(password) {
+    pwdModalLoading.value = true
     useRequest(
-        putSubjects,
+        () => putSubjects(password),
         {
             onSuccess: (response) => {
                 console.log(response.data)
@@ -74,11 +72,12 @@ function okay() {
                 } else {
                     messages.error(`服务端看完天塌了（状态码：${error}）`)
                 }
+            },
+            onFinally: () => {
+                pwdModalLoading.value = false
             }
         }
     );
-    buttonText.value = "确认提交"
-    disabledButton.value = false
 }
 
 const getSubjects = () => {
@@ -164,19 +163,12 @@ const previewCode = computed(() => JSON.stringify(dynamicForm, null, 2));
         <NCard title="提交前预览">
           <n-code :code="previewCode" language="json" show-line-numbers/>
         </NCard>
-        <n-modal v-model:show="showModal" preset="dialog" title="Dialog">
-            <template #header>
-              <div>你是入吗？</div>
-            </template>
-            <n-space vertical>
-                <div>此操作需要密码</div>
-                <n-input type="password" v-model:value="pwd" clearable />
-            </n-space>
-            <template #action>
-                <n-button attr-type="button" @click="okay" :disabled="disabledButton">
-                    {{ buttonText }}
-                </n-button>
-            </template>
-        </n-modal>
+
+        <ConfirmPasswordModal
+            v-model:show="showModal"
+            :loading="pwdModalLoading"
+            confirm-text="确认提交"
+            @confirm="onPwdConfirm"
+        />
     </NFlex>
 </template>

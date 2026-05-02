@@ -9,12 +9,12 @@ import {
   NForm,
   NFormItem,
   NInput,
-  NModal,
   NSelect,
   NSpace,
   NStatistic,
   useMessage
 } from "naive-ui";
+import ConfirmPasswordModal from '@/components/ConfirmPasswordModal.vue';
 import {computed, reactive, ref} from "vue";
 import axios from "axios";
 import {APISRV} from "@/global.js";
@@ -32,7 +32,6 @@ const school = computed(() => route.params.school);
 const grade = computed(() => route.params.grade);
 const cls = computed(() => route.params.cls);
 const formRef = ref(null);
-let pwd = ref('');
 let needs = {}
 
 const dynamicForm = reactive({
@@ -83,14 +82,13 @@ const dynamicForm = reactive({
 });
 
 let showModal = ref(false);
-let disabledButton = ref(false);
-let buttonText = ref("确认提交");
+let pwdModalLoading = ref(false);
 
 function submit() {
     showModal.value = true;
 }
 
-const putSchedule = () => {
+const putSchedule = (password) => {
     return Promise.resolve(
         axios.put(
             `${APISRV}/web/config/${school.value}/${grade.value}/${cls.value}/schedule`,
@@ -98,18 +96,18 @@ const putSchedule = () => {
             {
                 auth: {
                     username: 'ElectronClassSchedule',
-                    password: pwd.value
+                    password: password
                 }
             }
         )
     );
 }
 const messages = useMessage();
-function okay() {
-    disabledButton.value = true
-    buttonText.value = "你等会儿"
+
+function onPwdConfirm(password) {
+    pwdModalLoading.value = true
     useRequest(
-        putSchedule,
+        () => putSchedule(password),
         {
             onSuccess: (response) => {
                 console.log(response.data)
@@ -126,11 +124,12 @@ function okay() {
                 } else {
                     messages.error(`服务端看完天塌了（状态码：${error}）`)
                 }
+            },
+            onFinally: () => {
+                pwdModalLoading.value = false
             }
         }
     );
-    buttonText.value = "确认提交"
-    disabledButton.value = false
 }
 
 const getSchedule = () => {
@@ -327,19 +326,12 @@ const previewCode = computed(() => JSON.stringify(dynamicForm, null, 2));
         <NCard title="提交前预览">
           <n-code :code="previewCode" language="json" show-line-numbers/>
         </NCard>
-        <n-modal v-model:show="showModal" preset="dialog" title="Dialog">
-            <template #header>
-              <div>你是入吗？</div>
-            </template>
-            <n-space vertical>
-                <div>此操作需要密码</div>
-                <n-input type="password" v-model:value="pwd" clearable />
-            </n-space>
-            <template #action>
-                <n-button attr-type="button" @click="okay" :disabled="disabledButton">
-                    {{ buttonText }}
-                </n-button>
-            </template>
-        </n-modal>
+
+        <ConfirmPasswordModal
+            v-model:show="showModal"
+            :loading="pwdModalLoading"
+            confirm-text="确认提交"
+            @confirm="onPwdConfirm"
+        />
     </NFlex>
 </template>
