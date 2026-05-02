@@ -25,16 +25,6 @@ const router = createRouter(
                 component: () => import("../views/AddAutorunConfig.vue")
             },
             {
-                path: '/autorun/add-schedule',
-                name: 'AutorunAddSchedule',
-                component: () => import("../views/AddAutorunSchedule.vue")
-            },
-            {
-                path: '/autorun/edit-schedule/:id',
-                name: 'AutorunEditSchedule',
-                component: () => import("../views/AddAutorunSchedule.vue")
-            },
-            {
               path: '/countdown',
               name: 'Countdown',
               component: () => import("../views/Countdown.vue")

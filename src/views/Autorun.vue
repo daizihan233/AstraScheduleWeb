@@ -64,11 +64,7 @@ function renderType(type) {
 }
 
 function onEdit(row) {
-  if (row.type === AutorunType.SCHEDULE || row.type === AutorunType.ALL || row.type === 'SCHEDULE' || row.type === 'ALL') {
-    router.push(`/autorun/edit-schedule/${row.id}`)
-  } else {
-    router.push(`/autorun/edit/${row.id}`)
-  }
+  router.push(`/autorun/edit/${row.id}`)
 }
 
 // 删除逻辑（需密码）
@@ -127,8 +123,8 @@ function refresh() { run() }
 const addOptions = [
   { label: '调休', key: 'compensation', action: () => router.push('/autorun/add') },
   { label: '作息表调整', key: 'timetable', action: () => router.push('/autorun/add') },
-  { label: '课程表调整', key: 'schedule', action: () => router.push('/autorun/add-schedule') },
-  { label: '全部调整', key: 'all', action: () => router.push('/autorun/add-schedule') },
+  { label: '课程表调整', key: 'schedule', action: () => router.push('/autorun/add') },
+  { label: '全部调整', key: 'all', action: () => router.push('/autorun/add') },
 ]
 
 function onAddSelect(key) {
