@@ -1,7 +1,7 @@
 <script setup>
 import {
   NForm, NFormItem, NInput, NButton, NFlex, NCode, NCard, NStatistic, NModal, NSpace,
-  NSwitch, NDatePicker, useMessage, NText
+  NSwitch, NDatePicker, useMessage, NText, NColorPicker, NInputNumber
 } from 'naive-ui'
 import { reactive, ref, computed } from 'vue'
 import axios from 'axios'
@@ -30,7 +30,12 @@ const dynamicForm = reactive({
   weather_alert_brief: false,
   css_style: [
     // { key: '--center-font-size', value: '30px' }
-  ]
+  ],
+  // 天气温度颜色配置
+  temperature_colors: {
+    use_gradient: false,
+    stops: []
+  }
 })
 
 function pad(n){return n.toString().padStart(2,'0')}
@@ -51,13 +56,26 @@ function buildPayload(){
     // 新增字段随 payload 一并提交
     weather_alert_override: dynamicForm.weather_alert_override,
     weather_alert_brief: dynamicForm.weather_alert_brief,
-    css_style: css
+    css_style: css,
+    temperature_colors: {
+      use_gradient: dynamicForm.temperature_colors.use_gradient,
+      stops: dynamicForm.temperature_colors.stops.map(s => ({ temp: s.temp, color: s.color }))
+    }
   }
 }
 
 // css_style 动态增删
 function addCssItem(){ dynamicForm.css_style.push({ key: '', value: '' }) }
 function removeCssItem(index){ dynamicForm.css_style.splice(index,1) }
+
+// 温度端点动态增删
+function addStop() {
+  dynamicForm.temperature_colors.stops.push({ temp: 50, color: '#000000' })
+}
+function removeStop(index) {
+  if (dynamicForm.temperature_colors.stops.length <= 1) return
+  dynamicForm.temperature_colors.stops.splice(index, 1)
+}
 
 // 提交弹窗
 const showModal = ref(false)
@@ -108,7 +126,8 @@ useRequest(getSettings,{
     // 新增字段默认值，便于后端缺省兼容
     weather_alert_override:false,
     weather_alert_brief:false,
-    css_style:{}
+    css_style:{},
+    temperature_colors:{ use_gradient:false, stops:[] }
   },
   onSuccess:(resp)=>{
     const data = resp.data
@@ -132,6 +151,23 @@ useRequest(getSettings,{
     if(dynamicForm.css_style.length===0){
       // 初始化示例
       dynamicForm.css_style.push({ key:'--center-font-size', value:'30px' })
+    }
+    // 温度颜色配置回填
+    if(data.temperature_colors){
+      dynamicForm.temperature_colors.use_gradient = !!data.temperature_colors.use_gradient
+      dynamicForm.temperature_colors.stops = (data.temperature_colors.stops || []).map(s => ({
+        temp: s.temp ?? 20,
+        color: s.color || '#000000'
+      }))
+    }
+    if(!dynamicForm.temperature_colors.stops || dynamicForm.temperature_colors.stops.length===0){
+      // 默认端点
+      dynamicForm.temperature_colors.stops = [
+        { temp: 20, color: '#66CCFF' },
+        { temp: 30, color: '#5FBC21' },
+        { temp: 36, color: '#FF8C00' },
+        { temp: 100, color: '#EE0000' }
+      ]
     }
   }
 })
@@ -189,6 +225,29 @@ const preview = computed(()=> JSON.stringify(buildPayload(), null, 2))
             <NText depth="3" style="font-size: 12px;">
               简略信息示例：用“江苏省气象台发布大雾黄色预警”等短语替代冗长描述。
             </NText>
+          </NCard>
+          <NCard size="small" title="天气温度颜色配置">
+            <n-form-item label="启用颜色渐变">
+              <NSwitch v-model:value="dynamicForm.temperature_colors.use_gradient" />
+            </n-form-item>
+            <NText depth="3" style="font-size: 12px;">
+              关闭渐变：温度落入哪个区间就显示该区间的颜色。开启渐变：在相邻端点间线性过渡。
+            </NText>
+            <br />
+            <NSpace vertical style="margin-top: 12px;">
+              <NCard size="small" v-for="(stop, index) in dynamicForm.temperature_colors.stops" :key="index" :title="'端点 ' + (index + 1)">
+                <NSpace vertical>
+                  <n-form-item label="温度阈值 (°C)">
+                    <NInputNumber v-model:value="stop.temp" :min="-50" :max="100" :step="1" />
+                  </n-form-item>
+                  <n-form-item label="对应颜色">
+                    <NColorPicker v-model:value="stop.color" :show-alpha="false" :modes="['hex']" />
+                  </n-form-item>
+                  <NButton tertiary type="error" @click="removeStop(index)" v-if="dynamicForm.temperature_colors.stops.length > 1">删除此端点</NButton>
+                </NSpace>
+              </NCard>
+              <NButton dashed type="primary" @click="addStop">+ 添加温度端点</NButton>
+            </NSpace>
           </NCard>
           <NCard size="small" title="CSS 变量样式 (key / value)">
             <NSpace vertical>
