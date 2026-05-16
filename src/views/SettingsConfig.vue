@@ -8,13 +8,13 @@ import axios from 'axios'
 import { APISRV } from '@/global.js'
 import { useRequest } from 'vue-request'
 import { useRoute } from 'vue-router'
+import ConfirmPasswordModal from '@/components/ConfirmPasswordModal.vue'
 
 const route = useRoute()
 const school = computed(() => route.params.school)
 const grade = computed(() => route.params.grade)
 const cls = computed(() => route.params.cls)
 const formRef = ref(null)
-const pwd = ref('')
 
 // 表单内部结构拆分，便于交互
 // countdown_target: hidden 或 YYYY-MM-DD
@@ -79,36 +79,33 @@ function removeStop(index) {
 
 // 提交弹窗
 const showModal = ref(false)
-const disabledButton = ref(false)
-const buttonText = ref('确认提交')
+const pwdModalLoading = ref(false)
 function submit(){ showModal.value = true }
 
 const messages = useMessage()
 
-const putSettings = () => {
+const putSettings = (password) => {
   const payload = buildPayload()
   return Promise.resolve(
     axios.put(
       `${APISRV}/web/config/${school.value}/${grade.value}/${cls.value}/settings`,
       payload,
-      { auth:{ username:'ElectronClassSchedule', password: pwd.value } }
+      { auth:{ username:'ElectronClassSchedule', password: password } }
     )
   )
 }
 
-function okay(){
-  disabledButton.value = true
-  buttonText.value = '你等会儿'
-  useRequest(putSettings,{
+function onPwdConfirm(password){
+  pwdModalLoading.value = true
+  useRequest(() => putSettings(password),{
     onSuccess:()=>{ messages.success('服务端说行'); showModal.value=false },
     onError:(error)=>{
       if(error.status===401) messages.error('你寻思寻思这密码它对吗？')
       else if(error.status===400) messages.error('码姿不对，删了重写！（服务端校验不通过）')
       else messages.error(`服务端看完天塌了（状态码：${error.status}）`)
-    }
+    },
+    onFinally:()=>{ pwdModalLoading.value = false }
   })
-  buttonText.value='确认提交'
-  disabledButton.value=false
 }
 
 const getSettings = () => {
@@ -276,15 +273,12 @@ const preview = computed(()=> JSON.stringify(buildPayload(), null, 2))
     <NCard title="提交前预览">
       <n-code :code="preview" language="json" show-line-numbers />
     </NCard>
-    <n-modal v-model:show="showModal" preset="dialog" title="Dialog">
-      <template #header><div>你是入吗？</div></template>
-      <n-space vertical>
-        <div>此操作需要密码</div>
-        <n-input type="password" v-model:value="pwd" clearable />
-      </n-space>
-      <template #action>
-        <n-button attr-type="button" @click="okay" :disabled="disabledButton">{{ buttonText }}</n-button>
-      </template>
-    </n-modal>
+
+    <ConfirmPasswordModal
+      v-model:show="showModal"
+      :loading="pwdModalLoading"
+      confirm-text="确认提交"
+      @confirm="onPwdConfirm"
+    />
   </NFlex>
 </template>

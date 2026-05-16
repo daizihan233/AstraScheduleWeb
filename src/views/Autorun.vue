@@ -64,11 +64,7 @@ function renderType(type) {
 }
 
 function onEdit(row) {
-  if (row.type === AutorunType.SCHEDULE || row.type === AutorunType.ALL || row.type === 'SCHEDULE' || row.type === 'ALL') {
-    router.push(`/autorun/edit-schedule/${row.id}`)
-  } else {
-    router.push(`/autorun/edit/${row.id}`)
-  }
+  router.push(`/autorun/edit/${row.id}`)
 }
 
 // 删除逻辑（需密码）
@@ -123,16 +119,17 @@ const columns = [
 ]
 
 function refresh() { run() }
-function goAddBasic() { router.push('/autorun/add') }
-function goAddSchedule() { router.push('/autorun/add-schedule') }
+
+function goAdd() {
+  router.push('/autorun/add')
+}
 </script>
 
 <template>
   <n-card :bordered="false" title="自动任务状态概览">
     <template #header-extra>
       <n-space>
-        <n-button size="small" @click="goAddBasic">新增（调休/作息表）</n-button>
-        <n-button size="small" @click="goAddSchedule">新增（课程表/ALL）</n-button>
+        <n-button size="small" @click="goAdd">新增</n-button>
         <n-button size="small" @click="refresh" :loading="loading">刷新</n-button>
       </n-space>
     </template>
