@@ -1,11 +1,137 @@
 <script setup>
-import { NButton, NCard, NFlex, NSpace, NText, NRadioGroup, NRadioButton, useMessage } from 'naive-ui'
-import { ref } from 'vue'
+import { NButton, NCard, NFlex, NForm, NFormItem, NInput, NModal, NSelect, NSpace, NText, NRadioGroup, NRadioButton, useMessage } from 'naive-ui'
+import { computed, reactive, ref, watch } from 'vue'
+import axios from 'axios'
+import { useRequest } from 'vue-request'
 import { useRouter } from 'vue-router'
 import { fullExport, fullImport } from '@/api/backup.js'
 import ConfirmPasswordModal from '@/components/ConfirmPasswordModal.vue'
+import { APISRV } from '../global.js'
 
 const messages = useMessage()
+
+// -------------------- 配置复制（复制自...） --------------------
+const structureData = ref([])
+const copyPwd = ref('')
+const showCopyModal = ref(false)
+const copyLoading = ref(false)
+const copyForm = reactive({
+  fromSchool: '',
+  fromGrade: '',
+  fromClass: '',
+  toSchool: '',
+  toGrade: '',
+  toClass: ''
+})
+
+const getStructure = () => axios.get(`${APISRV}/web/structure`)
+useRequest(getStructure, {
+  initialData: [],
+  onSuccess: (response) => {
+    structureData.value = Array.isArray(response.data) ? response.data : []
+  }
+})
+
+function getSchoolNode(school) {
+  return structureData.value.find(x => x.text === school)
+}
+
+function getGradeNode(school, grade) {
+  const schoolNode = getSchoolNode(school)
+  const grades = Array.isArray(schoolNode?.children) ? schoolNode.children : []
+  return grades.find(x => x.text === grade)
+}
+
+function toOptions(arr = []) {
+  return arr.map(x => ({ label: x.text, value: x.text }))
+}
+
+const schoolOptions = computed(() => toOptions(structureData.value))
+const fromGradeOptions = computed(() => {
+  const schoolNode = getSchoolNode(copyForm.fromSchool)
+  return toOptions(Array.isArray(schoolNode?.children) ? schoolNode.children : [])
+})
+const fromClassOptions = computed(() => {
+  const gradeNode = getGradeNode(copyForm.fromSchool, copyForm.fromGrade)
+  return toOptions(Array.isArray(gradeNode?.children) ? gradeNode.children : [])
+})
+
+watch(() => copyForm.fromSchool, () => {
+  copyForm.fromGrade = ''
+  copyForm.fromClass = ''
+})
+watch(() => copyForm.fromGrade, () => {
+  copyForm.fromClass = ''
+})
+
+function validateCopyForm() {
+  if (!copyForm.fromSchool || !copyForm.fromGrade || !copyForm.fromClass) {
+    messages.warning('请完整选择来源 学校/年级/班级')
+    return false
+  }
+  if (!copyForm.toSchool || !copyForm.toGrade || !copyForm.toClass) {
+    messages.warning('请完整选择目标 学校/年级/班级')
+    return false
+  }
+  if (
+    copyForm.fromSchool === copyForm.toSchool &&
+    copyForm.fromGrade === copyForm.toGrade &&
+    copyForm.fromClass === copyForm.toClass
+  ) {
+    messages.warning('来源与目标不能完全相同')
+    return false
+  }
+  return true
+}
+
+function openCopyModal() {
+  if (!validateCopyForm()) return
+  showCopyModal.value = true
+}
+
+async function doCopyConfig() {
+  if (!validateCopyForm()) return
+  copyLoading.value = true
+  try {
+    await axios.post(
+      `${APISRV}/web/config/copy`,
+      {
+        from: {
+          school: copyForm.fromSchool,
+          grade: copyForm.fromGrade,
+          class: copyForm.fromClass
+        },
+        to: {
+          school: copyForm.toSchool,
+          grade: copyForm.toGrade,
+          class: copyForm.toClass
+        }
+      },
+      {
+        auth: {
+          username: 'ElectronClassSchedule',
+          password: copyPwd.value
+        }
+      }
+    )
+    messages.success('复制完成')
+    showCopyModal.value = false
+    copyPwd.value = ''
+  } catch (error) {
+    const status = error?.response?.status
+    const detail = error?.response?.data?.detail || error?.response?.data?.error || ''
+    if (status === 401) {
+      messages.error('你寻思寻思这密码它对吗？')
+    } else if (status === 400 || status === 404) {
+      messages.error(detail || `复制失败（${status}）`)
+    } else {
+      messages.error(`复制失败（${status || 'unknown'}）`)
+    }
+  } finally {
+    copyLoading.value = false
+  }
+}
+
 const router = useRouter()
 const importFile = ref(null)
 const importFileInputRef = ref(null)
@@ -91,6 +217,43 @@ async function onPwdConfirm(password) {
       <NText depth="3">系统迁移工具：支持完整导出/导入数据库配置（JSON），用于跨数据库迁移（如 MySQL → SQLite）。</NText>
     </NCard>
 
+    <NCard title="配置复制">
+      <NFlex vertical>
+        <NText depth="3">将来源班级的科目配置、作息配置、课表配置、通用设置，复制到目标班级（目标存在时会覆盖）。</NText>
+        <NFlex>
+          <NCard size="small" title="来源">
+            <NForm :show-label="true" label-placement="top">
+              <NFormItem label="学校">
+                <NSelect v-model:value="copyForm.fromSchool" :options="schoolOptions" placeholder="选择来源学校"/>
+              </NFormItem>
+              <NFormItem label="年级">
+                <NSelect v-model:value="copyForm.fromGrade" :options="fromGradeOptions" placeholder="选择来源年级"/>
+              </NFormItem>
+              <NFormItem label="班级">
+                <NSelect v-model:value="copyForm.fromClass" :options="fromClassOptions" placeholder="选择来源班级"/>
+              </NFormItem>
+            </NForm>
+          </NCard>
+          <NCard size="small" title="目标">
+            <NForm :show-label="true" label-placement="top">
+              <NFormItem label="学校">
+                <NInput v-model:value="copyForm.toSchool" placeholder="输入目标学校"/>
+              </NFormItem>
+              <NFormItem label="年级">
+                <NInput v-model:value="copyForm.toGrade" placeholder="输入目标年级"/>
+              </NFormItem>
+              <NFormItem label="班级">
+                <NInput v-model:value="copyForm.toClass" placeholder="输入目标班级"/>
+              </NFormItem>
+            </NForm>
+          </NCard>
+        </NFlex>
+        <NFlex justify="center">
+          <NButton type="primary" @click="openCopyModal">复制配置</NButton>
+        </NFlex>
+      </NFlex>
+    </NCard>
+
     <NCard title="系统备份 / 还原">
       <NSpace vertical>
         <NFlex>
@@ -127,5 +290,20 @@ async function onPwdConfirm(password) {
       confirm-text="确认操作"
       @confirm="onPwdConfirm"
     />
+
+    <NModal v-model:show="showCopyModal" preset="dialog" title="确认复制">
+      <template #header>
+        <div>确认复制配置？</div>
+      </template>
+      <NFlex vertical>
+        <div>来源：{{ copyForm.fromSchool }}/{{ copyForm.fromGrade }}/{{ copyForm.fromClass }}</div>
+        <div>目标：{{ copyForm.toSchool }}/{{ copyForm.toGrade }}/{{ copyForm.toClass }}</div>
+        <div>此操作需要密码</div>
+        <NInput v-model:value="copyPwd" clearable placeholder="请输入密码" type="password"/>
+      </NFlex>
+      <template #action>
+        <NButton :loading="copyLoading" type="primary" @click="doCopyConfig">确认复制</NButton>
+      </template>
+    </NModal>
   </NFlex>
 </template>
